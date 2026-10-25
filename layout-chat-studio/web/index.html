@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout Chat Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+:root{--bg:#d9e1e7;--panel:#f5f7f8;--ink:#1b2733;--mute:#5b6b7a;--line:#b9c5ce;--cobalt:#2a44e8;--amber:#f0a92e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Bricolage Grotesque',system-ui,sans-serif}
+header{padding:20px 24px 4px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:-.02em}
+header p{margin:0;color:var(--mute)}
+main{display:grid;grid-template-columns:390px minmax(0,1fr);gap:16px;padding:16px 24px 32px;max-width:1500px;margin:auto}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+section{background:var(--panel);border:1px solid var(--line);padding:16px}
+h2{margin:0 0 8px;font-size:18px;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-weight:600;padding:8px 14px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;border-radius:4px}
+button:hover:not(:disabled){background:var(--ink);color:var(--panel)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+button.primary:hover:not(:disabled){background:#1c33c4;color:#fff}
+button[aria-pressed=true]{background:var(--amber);border-color:var(--ink);color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+#log{height:250px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px 8px}
+.msg{padding:8px 12px;max-width:90%;white-space:pre-line;font-size:15px;border-radius:6px}
+.bot{background:#e6ebef;align-self:flex-start}.me{background:var(--cobalt);color:#fff;align-self:flex-end}
+#chat{display:flex;gap:8px;margin-top:6px}
+input[type=text],select{font:inherit;padding:8px;border:1px solid var(--line);background:#fff;border-radius:4px;width:100%}
+#chat input{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chips button{font-weight:400;font-size:13px;padding:4px 10px;border-radius:99px;border-color:var(--line)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+input[type=color]{width:100%;height:36px;padding:2px;border:1px solid var(--line);background:#fff}
+.chk{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink);margin-top:10px}
+#secs{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
+#secs li{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);padding:4px 8px}
+#secs span{flex:1}#secs button{padding:2px 8px;font-size:13px}
+h3{margin:14px 0 0;font-size:15px}
+#frame{display:block;width:100%;height:640px;margin:10px auto 0;border:1px solid var(--line);background:#fff;transition:width .2s}
+#frame.phone{width:390px;max-width:100%}
+pre{margin:10px 0;padding:12px;background:#1b2733;color:#e7edf2;font:13px/1.5 'DM Mono',ui-monospace,monospace;max-height:300px;overflow:auto}
+.hint{margin:8px 0 0;color:var(--mute);font-size:14px}
+</style>
+</head>
+<body>
+<header><h1>Layout Chat Studio</h1><p>Describe a website, tweak it with the tools, copy the HTML, CSS and JavaScript. Python runs in your browser.</p></header>
+<main>
+  <div class="col">
+    <section><h2>Chat</h2>
+      <div id="log" aria-live="polite"></div>
+      <form id="chat"><input type="text" id="msg" placeholder="e.g. Build a SaaS site with pricing" aria-label="Message" autocomplete="off" disabled><button class="primary" disabled>Send</button></form>
+      <div class="chips" id="chips"></div></section>
+    <section><h2>Tools</h2>
+      <div class="g2">
+        <label>Brand name<input type="text" data-k="brand" maxlength="30"></label>
+        <label>Accent color<input type="color" data-k="accent"></label>
+        <label>Font<select data-k="font"><option>sans</option><option>serif</option><option>rounded</option><option>mono</option></select></label>
+        <label>Navigation<select data-k="nav"><option>top</option><option>center</option><option>pill</option></select></label>
+        <label>Hero<select data-k="hero"><option>split</option><option>reverse</option><option>center</option><option>big</option></select></label>
+        <label>Feature columns<select data-k="cols" data-num="1"><option>2</option><option>3</option><option>4</option></select></label>
+        <label>Cards<select data-k="cards"><option>cards</option><option>lines</option></select></label>
+        <label>Corners<input type="range" data-k="radius" data-num="1" min="0" max="32"></label>
+        <label>Spacing<input type="range" data-k="space" data-num="1" min="32" max="128"></label>
+        <label>Page width<input type="range" data-k="width" data-num="1" min="880" max="1320" step="20"></label>
+      </div>
+      <label class="chk"><input type="checkbox" data-k="dark"> Dark theme</label>
+      <label class="chk"><input type="checkbox" data-k="js"> Add JavaScript (menu, theme toggle, animations)</label>
+      <h3>Sections</h3><ul id="secs"></ul>
+      <div class="row"><select id="addsel" style="width:auto"></select><button id="addbtn">Add</button><button id="undo">Undo</button><button id="reset">Reset</button></div></section>
+  </div>
+  <div class="col">
+    <section><div class="row"><button id="vdesk" aria-pressed="true">Desktop</button><button id="vphone" aria-pressed="false">Phone</button></div>
+      <iframe id="frame" title="Website preview"></iframe></section>
+    <section><h2>Get the code</h2>
+      <div class="row"><button id="thtml" aria-pressed="true">HTML</button><button id="tcss" aria-pressed="false">CSS</button><button id="tjs" aria-pressed="false">JavaScript</button></div>
+      <pre id="code" tabindex="0"></pre>
+      <div class="row"><button id="copy">Copy code</button><button id="dl">Download this tab</button><button id="dlall">Download as separate files</button></div>
+      <p class="hint">The HTML tab is one self-contained file. "Separate files" gives you index.html, style.css and script.js.</p></section>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+let api, S, meta, code, tab = 'html';
+const CHIPS = ['Build a SaaS landing page', 'Make it dark with a teal accent', 'Add pricing and a FAQ', 'Use a centered hero and 4 columns', 'Add JavaScript'];
+
+function say(who, text){
+  const d = document.createElement('div'); d.className = 'msg ' + who; d.textContent = text;
+  $('#log').appendChild(d); $('#log').scrollTop = 1e9;
+}
+function send(m){
+  const r = JSON.parse(api(JSON.stringify(m)));
+  S = r.state; meta = r.meta; code = r.code;
+  if (r.reply) say('bot', r.reply);
+  sync();
+  try { localStorage.setItem('lay-py', JSON.stringify(S)); } catch (e) {}
+}
+function sync(){
+  document.querySelectorAll('[data-k]').forEach(el => {
+    const v = S[el.dataset.k];
+    if (el.type === 'checkbox') el.checked = v; else if (el.value !== String(v)) el.value = v;
+  });
+  const ul = $('#secs'); ul.innerHTML = '';
+  S.sections.forEach((k, i) => {
+    const li = document.createElement('li'), sp = document.createElement('span');
+    sp.textContent = meta.sections[k]; li.appendChild(sp);
+    [['↑', () => send({cmd:'move', type:k, dir:-1}), i === 0, 'Move up'], ['↓', () => send({cmd:'move', type:k, dir:1}), i === S.sections.length - 1, 'Move down'],
+     ['✕', () => send({cmd:'remove', type:k}), false, 'Remove']].forEach(([t, fn, dis, label]) => {
+      const b = document.createElement('button'); b.textContent = t; b.disabled = dis; b.setAttribute('aria-label', label + ' ' + meta.sections[k]); b.onclick = fn; li.appendChild(b);
+    });
+    ul.appendChild(li);
+  });
+  const rest = Object.keys(meta.sections).filter(k => !S.sections.includes(k));
+  $('#addsel').innerHTML = rest.map(k => `<option value="${k}">${meta.sections[k]}</option>`).join('');
+  $('#addbtn').disabled = !rest.length;
+  $('#tjs').disabled = !S.js; if (!S.js && tab === 'js') tab = 'html';
+  ['html', 'css', 'js'].forEach(n => $('#t' + n).setAttribute('aria-pressed', n === tab));
+  $('#code').textContent = code[tab];
+  const f = $('#frame'); if (f.dataset.h !== code.html) { f.dataset.h = code.html; f.srcdoc = code.html; }
+}
+document.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => {
+  const v = el.type === 'checkbox' ? el.checked : el.dataset.num ? Number(el.value) : el.value;
+  send({cmd:'set', key: el.dataset.k, value: v});
+}));
+$('#chat').onsubmit = e => {
+  e.preventDefault(); const t = $('#msg').value.trim(); if (!t) return;
+  $('#msg').value = ''; say('me', t); send({cmd:'chat', text:t});
+};
+$('#chips').innerHTML = CHIPS.map(t => `<button type="button">${t}</button>`).join('');
+$('#chips').onclick = e => { if (e.target.tagName === 'BUTTON' && !$('#msg').disabled) { say('me', e.target.textContent); send({cmd:'chat', text:e.target.textContent}); } };
+$('#addbtn').onclick = () => send({cmd:'add', type: $('#addsel').value});
+$('#undo').onclick = () => send({cmd:'undo'});
+$('#reset').onclick = () => send({cmd:'reset'});
+['html', 'css', 'js'].forEach(n => $('#t' + n).onclick = () => { tab = n; sync(); });
+const view = p => { $('#frame').classList.toggle('phone', p); $('#vdesk').setAttribute('aria-pressed', !p); $('#vphone').setAttribute('aria-pressed', p); };
+$('#vdesk').onclick = () => view(false); $('#vphone').onclick = () => view(true);
+$('#copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(code[tab]); $('#copy').textContent = 'Copied'; } catch (e) { $('#copy').textContent = 'Select the code and copy'; }
+  setTimeout(() => $('#copy').textContent = 'Copy code', 1500);
+};
+const save = (name, text, type) => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+};
+const MIME = {html:'text/html', css:'text/css', js:'text/javascript'};
+$('#dl').onclick = () => save('layout.' + tab, code[tab], MIME[tab]);
+$('#dlall').onclick = () => {
+  const linked = JSON.parse(api(JSON.stringify({cmd:'linked'}))).code;
+  save('index.html', linked.html, MIME.html);
+  setTimeout(() => save('style.css', linked.css, MIME.css), 300);
+  if (S.js) setTimeout(() => save('script.js', linked.js, MIME.js), 600);
+};
+async function boot(){
+  say('bot', 'Loading Python in your browser. The first load downloads about 10 MB, then it is cached.');
+  try {
+    const py = await loadPyodide({indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/'});
+    py.runPython(await (await fetch('app.py')).text());
+    api = py.globals.get('api');
+    let saved = null; try { saved = JSON.parse(localStorage.getItem('lay-py')); } catch (e) {}
+    send({cmd:'load', state: saved});
+    document.querySelectorAll('#chat input,#chat button').forEach(el => el.disabled = false);
+    say('bot', 'Ready. Tell me what kind of website you want, or say help for examples.');
+  } catch (e) { say('bot', 'Could not start Python: ' + e.message + '. Check your connection and reload.'); }
+}
+boot();
+</script>
+</body>
+</html>
